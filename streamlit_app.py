@@ -120,8 +120,8 @@ def main():
         st.image(IMAGE_PATH)
         st.write("The Kaggle House Prices competition provides a unique opportunity to apply advanced data analytics techniques to predict the final sale price of homes in Ames, Iowa. In this project, I leverage a powerful CatBoost model to accurately estimate house prices based on a rich dataset encompassing various features of houses, such as size, neighborhood, year built, and overall quality.")
         st.link_button("Competition Page", "https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/overview")
-        st.subheader("Use the sidebar to navigate through this application.") 
-        st.markdown("**User-based SHAP:** Select a specific house to view its actual vs. predicted price along with SHAP visualizations, offering detailed insights into how each feature influenced the prediction.")
+        st.subheader("Use the sidebar to navigate through this application:") 
+        st.markdown("**House-based SHAP:** Select a specific house to view its actual vs. predicted price along with SHAP visualizations. This feature offers detailed insights into how each feature influenced the prediction.")
         st.markdown("**Feature Importance:** Explore the features used to train the CatBoost model and understand their relative importance in predicting house prices.")
         
 
@@ -130,15 +130,20 @@ def main():
         # House ID text input
         house_id = st.selectbox("Choose a House", available_house_ids)
         house_index = X_test[X_test['house_id'] == house_id].index[0]
-        st.write(f'Actual Price of House {house_id}: ${np.expm1(y_test.iloc[house_index].SalePrice).round(2)}')
+        actual_price = np.expm1(y_test.iloc[house_index].SalePrice).round(2)
+        formatted_actual_price = f'{actual_price:,.2f}'
+        st.write(f'Actual Price of House {house_id}: ${formatted_actual_price}')
         y_pred = model.predict(X_test.drop(['house_id'], axis=1))
-        st.write(f"CatBoost Model's Price Prediction for House {house_id}: ${np.expm1(y_pred[house_id]).round(2)}")
-
-        difference = np.expm1(y_pred[house_id]).round(2) - np.expm1(y_test.iloc[house_index].SalePrice)
+        predicted_price = np.expm1(y_pred[house_index]).round(2) 
+        formatted_predicted_price = f'{predicted_price:,.2f}'
+        st.write(f"CatBoost Model's Price Prediction for House {house_id}: ${formatted_predicted_price}")
+        
+        difference = predicted_price - actual_price
+        formatted_difference = f'{np.abs(difference):,.2f}'
         if difference > 0:
-            st.write(f"Difference Between the Predicted and Actual Price: ${np.round(difference,2)}")
+            st.write(f"Difference Between the Predicted and Actual Price: ${formatted_difference}")
         else:
-            st.write(f"Difference Between the Predicted and Actual Price: -${np.absolute(np.round(difference,2))}")
+            st.write(f"Difference Between the Predicted and Actual Price: -${formatted_difference}")
         plot_shap(model, data, house_id, X_train=X_train, X_test=X_test)
 
     # If Feature Importance is selected
