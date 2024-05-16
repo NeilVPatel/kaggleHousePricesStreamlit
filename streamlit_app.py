@@ -9,9 +9,9 @@ from catboost import CatBoostRegressor, Pool
 import joblib
 
 # Path of the trained model and data
-MODEL_PATH = "house_price_venv\Scripts\model\catboost_model.cbm"
-DATA_PATH = "house_price_venv\Scripts\data.parquet"
-IMAGE_PATH = "house_price_venv\Scripts\DALLE_image_for_homepage.webp"
+MODEL_PATH = "/mount/src/kagglehousepricesstreamlit/catboost_model.cbm"
+DATA_PATH = "/mount/src/kagglehousepricesstreamlit/data.parquet"
+IMAGE_PATH = "/mount/src/kagglehousepricesstreamlit/DALLE_image_for_homepage.webp"
 
 # Set Page Title
 st.set_page_config(page_title="House Prices Project")
@@ -103,10 +103,10 @@ def main():
     model = load_model()
     data = load_data()
 
-    X_train = load_x_y("house_price_venv\Scripts\X_train.pkl")
-    X_test = load_x_y("house_price_venv\Scripts\X_test.pkl")
-    y_train = load_x_y("house_price_venv\Scripts\y_train.pkl")
-    y_test = load_x_y("house_price_venv\Scripts\y_test.pkl")
+    X_train = load_x_y("/mount/src/kagglehousepricesstreamlit/X_train.pkl")
+    X_test = load_x_y("/mount/src/kagglehousepricesstreamlit/X_test.pkl")
+    y_train = load_x_y("/mount/src/kagglehousepricesstreamlit/y_train.pkl")
+    y_test = load_x_y("/mount/src/kagglehousepricesstreamlit/y_test.pkl")
 
     # Radio buttons for options in sidebar
     with st.sidebar:
