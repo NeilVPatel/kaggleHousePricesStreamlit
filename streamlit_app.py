@@ -17,16 +17,18 @@ IMAGE_PATH = "/mount/src/kagglehousepricesstreamlit/DALLE_image_for_homepage.web
 st.set_page_config(page_title="House Prices Project")
 
 # Define data, model, and train/test sets
-@st.cache_resource
+@st.cache_data
 def load_data():
     data = pd.read_parquet(DATA_PATH)
     return data
 
+@st.cache_data
 def load_x_y(file_path):
     data = joblib.load(file_path)
     data.reset_index(drop=True, inplace=True)
     return data
 
+@st.cache_resource
 def load_model():
     model = CatBoostRegressor()
     try:
@@ -50,25 +52,74 @@ def plot_shap_values(model, explainer, shap_values_cat_train, shap_values_cat_te
 
     if not house_data.empty:
         house_index = house_data.index[0]
-        fig, ax_2 = plt.subplots(figsize=(6,6), dpi=200)
-        shap.decision_plot(explainer.expected_value, shap_values_cat_test[house_index], X_test.loc[house_index])
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        shap.decision_plot(
+            base_value=explainer.expected_value, 
+            shap_values=shap_values_cat_test[house_index], 
+            features=X_test.loc[house_index]
+        )
+
+        # Set axis labels
+        ax.set_xlabel('Model output value', fontsize=14)
+        ax.set_ylabel('Features', fontsize=14)
+
+        # Adjust font size and weight for ticks
+        for item in ([ax.xaxis.label, ax.yaxis.label]):
+            item.set_fontsize(12)
+            item.set_weight('bold')
+
+        # Optionally, you can adjust colors
+        plt.axhline(0, color='black', linewidth=0.5)
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+
         st.pyplot(fig)
         plt.close()
     else:
-        print("No house found with the specified ID.")
+        st.error("No house found with the specified ID.")
         return
 
 def display_shap_summary(shap_values_cat_train, X_train):
     # Create the plot summarizing the SHAP values
-    shap.summary_plot(shap_values_cat_train, X_train, plot_type="bar", plot_size=(12,12))
-    summary_fig, _ = plt.gcf(), plt.gca()
-    st.pyplot(summary_fig)
+    fig, ax = plt.subplots(figsize=(12, 8))
+    shap.summary_plot(shap_values_cat_train, X_train, plot_type="bar", show=False, plot_size=(12, 8))
+
+    # Set axis labels
+    ax.set_xlabel('mean(|SHAP value|) (average impact on model output magnitude)', fontsize=14)
+    ax.set_ylabel('Features', fontsize=14)
+
+    # Adjust font size and weight for ticks
+    for item in ([ax.xaxis.label, ax.yaxis.label]):
+        item.set_fontsize(12)
+        item.set_weight('bold')
+
+    # Optionally, you can adjust colors and add a grid
+    plt.axhline(0, color='black', linewidth=0.5)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+
+    st.pyplot(fig)
     plt.close()
     
 def display_shap_waterfall_plot(explainer, expected_value, shap_values, feature_names, max_display=11):
     # Create SHAP waterfall drawing
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=150)
+    fig, ax = plt.subplots(figsize=(10, 8), dpi=150)
+
+    # Generate the SHAP waterfall plot
     shap.plots._waterfall.waterfall_legacy(expected_value, shap_values, feature_names=feature_names, max_display=max_display, show=False)
+
+    # Set axis labels
+    ax.set_xlabel('Model output value', fontsize=14)
+    ax.set_ylabel('Features', fontsize=14)
+
+    # Adjust font size and weight for ticks
+    for item in ([ax.xaxis.label, ax.yaxis.label]):
+        item.set_fontsize(12)
+        item.set_weight('bold')
+
+    # Optionally, you can adjust colors and add a grid
+    plt.axhline(0, color='black', linewidth=0.5)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+
     st.pyplot(fig)
     plt.close()
 
@@ -120,8 +171,8 @@ def main():
         st.image(IMAGE_PATH)
         st.write("The Kaggle House Prices competition provides a unique opportunity to apply advanced data analytics techniques to predict the final sale price of homes in Ames, Iowa. In this project, I leverage a powerful CatBoost model to accurately estimate house prices based on a rich dataset encompassing various features of houses, such as size, neighborhood, year built, and overall quality.")
         st.link_button("Competition Page", "https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/overview")
-        st.subheader("Use the sidebar to navigate through this application:") 
-        st.markdown("**House-based SHAP:** Select a specific house to view its actual vs. predicted price along with SHAP visualizations. This feature offers detailed insights into how each feature influenced the prediction.")
+        st.subheader("Use the sidebar to navigate through this application.") 
+        st.markdown("**User-based SHAP:** Select a specific house to view its actual vs. predicted price along with SHAP visualizations, offering detailed insights into how each feature influenced the prediction.")
         st.markdown("**Feature Importance:** Explore the features used to train the CatBoost model and understand their relative importance in predicting house prices.")
         
 
@@ -130,20 +181,15 @@ def main():
         # House ID text input
         house_id = st.selectbox("Choose a House", available_house_ids)
         house_index = X_test[X_test['house_id'] == house_id].index[0]
-        actual_price = np.expm1(y_test.iloc[house_index].SalePrice).round(2)
-        formatted_actual_price = f'{actual_price:,.2f}'
-        st.write(f'Actual Price of House {house_id}: ${formatted_actual_price}')
+        st.write(f'Actual Price of House {house_id}: ${np.expm1(y_test.iloc[house_index].SalePrice).round(2)}')
         y_pred = model.predict(X_test.drop(['house_id'], axis=1))
-        predicted_price = np.expm1(y_pred[house_index]).round(2) 
-        formatted_predicted_price = f'{predicted_price:,.2f}'
-        st.write(f"CatBoost Model's Price Prediction for House {house_id}: ${formatted_predicted_price}")
-        
-        difference = predicted_price - actual_price
-        formatted_difference = f'{np.abs(difference):,.2f}'
+        st.write(f"CatBoost Model's Price Prediction for House {house_id}: ${np.expm1(y_pred[house_id]).round(2)}")
+
+        difference = np.expm1(y_pred[house_id]).round(2) - np.expm1(y_test.iloc[house_index].SalePrice)
         if difference > 0:
-            st.write(f"Difference Between the Predicted and Actual Price: ${formatted_difference}")
+            st.write(f"Difference Between the Predicted and Actual Price: ${np.round(difference,2)}")
         else:
-            st.write(f"Difference Between the Predicted and Actual Price: -${formatted_difference}")
+            st.write(f"Difference Between the Predicted and Actual Price: -${np.absolute(np.round(difference,2))}")
         plot_shap(model, data, house_id, X_train=X_train, X_test=X_test)
 
     # If Feature Importance is selected
