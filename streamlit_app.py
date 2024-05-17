@@ -7,11 +7,17 @@ from matplotlib import pyplot as plt
 from pyarrow import parquet as pq
 from catboost import CatBoostRegressor, Pool
 import joblib
+import home_page  # Import the home page module
+import eda  # Import the EDA module
+import data_cleaning    # Import the Data Cleaning module
+import feature_engineering  # Import the Feature Engineering module
+import model_training  # Import the Model Training module
+import conclusion_future_work  # Import the Conclusion and Future Work module
+import feature_definitions  # Import the Feature Definitions module
 
-# Path of the trained model and data
+# Path of the trained model, data
 MODEL_PATH = "/mount/src/kagglehousepricesstreamlit/catboost_model.cbm"
 DATA_PATH = "/mount/src/kagglehousepricesstreamlit/data.parquet"
-IMAGE_PATH = "/mount/src/kagglehousepricesstreamlit/DALLE_image_for_homepage.webp"
 
 # Set Page Title
 st.set_page_config(page_title="House Prices Project")
@@ -20,7 +26,8 @@ st.set_page_config(page_title="House Prices Project")
 @st.cache_data
 def load_data():
     data = pd.read_parquet(DATA_PATH)
-    return data
+    train = data
+    return data, train
 
 @st.cache_data
 def load_x_y(file_path):
@@ -94,7 +101,6 @@ def display_shap_summary(shap_values_cat_train, X_train):
         item.set_weight('bold')
 
     # Optionally, you can adjust colors and add a grid
-    plt.axhline(0, color='black', linewidth=0.5)
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
 
     st.pyplot(fig)
@@ -117,7 +123,6 @@ def display_shap_waterfall_plot(explainer, expected_value, shap_values, feature_
         item.set_weight('bold')
 
     # Optionally, you can adjust colors and add a grid
-    plt.axhline(0, color='black', linewidth=0.5)
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
 
     st.pyplot(fig)
@@ -148,53 +153,86 @@ def plot_shap(model, data, house_id, X_train, X_test):
     display_shap_waterfall_plot(explainer, explainer.expected_value, shap_values_cat_test[house_index], feature_names=X_test.columns, max_display=11)
     st.caption("This plot shows the base value (the average model prediction) and then adds or subtracts the contribution of each feature to show how they lead to the final prediction for a specific house. It gives a step-by-step explanation of how the model arrived at its prediction for that house.")
     
-st.title("Kaggle House Prices Project")
+st.title("House Prices Prediction Project")
 
 def main():
     model = load_model()
-    data = load_data()
+    data, train = load_data()
 
     X_train = load_x_y("/mount/src/kagglehousepricesstreamlit/X_train.pkl")
     X_test = load_x_y("/mount/src/kagglehousepricesstreamlit/X_test.pkl")
     y_train = load_x_y("/mount/src/kagglehousepricesstreamlit/y_train.pkl")
     y_test = load_x_y("/mount/src/kagglehousepricesstreamlit/y_test.pkl")
 
-    # Radio buttons for options in sidebar
-    with st.sidebar:
-        election = st.radio(
-            "Make Your Choice:",
-            ("Home", "User-based SHAP", "Feature Importance")
-        )
+    # Navigation
+    st.sidebar.title('Navigation')
+    page = st.sidebar.radio('Go to:', [
+        'Home',
+        'Exploratory Data Analysis',
+        'Data Cleaning',
+        'Feature Engineering',
+        'Model Training and Evaluation',
+        'Feature Importance',
+        'House-based SHAP Analysis',
+        'Conclusion and Future Work',
+        'Feature Definitions'
+    ])
+    
     available_house_ids = X_test['house_id'].tolist()
 
-    if election == "Home":
-        st.image(IMAGE_PATH)
-        st.write("The Kaggle House Prices competition provides a unique opportunity to apply advanced data analytics techniques to predict the final sale price of homes in Ames, Iowa. In this project, I leverage a powerful CatBoost model to accurately estimate house prices based on a rich dataset encompassing various features of houses, such as size, neighborhood, year built, and overall quality.")
-        st.link_button("Competition Page", "https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/overview")
-        st.subheader("Use the sidebar to navigate through this application.") 
-        st.markdown("**User-based SHAP:** Select a specific house to view its actual vs. predicted price along with SHAP visualizations, offering detailed insights into how each feature influenced the prediction.")
-        st.markdown("**Feature Importance:** Explore the features used to train the CatBoost model and understand their relative importance in predicting house prices.")
+    # Homepage contents
+    if page == 'Home':
+        home_page.display_home()
         
+    # Call the EDA display function if the selected page is 'Exploratory Data Analysis'
+    elif page == 'Exploratory Data Analysis':
+        eda.display_eda(train)
+
+    # Call the data_cleaning display function if the selected page is 'Data Cleaning'
+    elif page == 'Data Cleaning':
+        data_cleaning.display_data_cleaning()
+
+    # Call the feature engineering display function if the selected page is 'Feature Engineering'
+    elif page == 'Feature Engineering':
+        feature_engineering.display_feature_engineering()
+
+    # Call the model training display function if the selected page is 'Model Training and Evaluation'
+    elif page == 'Model Training and Evaluation':
+        model_training.display_model_training()
+
+    # If Feature Importance is selected
+    elif page == "Feature Importance":
+        summary(model, data, X_train=X_train.drop('house_id',axis=1), X_test=X_test.drop('house_id',axis=1))
 
     # If User-based SHAP option is selected
-    if election == "User-based SHAP":
+    elif page == "House-based SHAP Analysis":
         # House ID text input
         house_id = st.selectbox("Choose a House", available_house_ids)
         house_index = X_test[X_test['house_id'] == house_id].index[0]
-        st.write(f'Actual Price of House {house_id}: ${np.expm1(y_test.iloc[house_index].SalePrice).round(2)}')
-        y_pred = model.predict(X_test.drop(['house_id'], axis=1))
-        st.write(f"CatBoost Model's Price Prediction for House {house_id}: ${np.expm1(y_pred[house_id]).round(2)}")
+        actual_price = np.expm1(y_test.iloc[house_index].SalePrice).round(2)
+        formatted_actual_price = f'{actual_price:,.2f}'
+        st.write(f'Actual Price of House {house_id}: ${formatted_actual_price}')
 
-        difference = np.expm1(y_pred[house_id]).round(2) - np.expm1(y_test.iloc[house_index].SalePrice)
+        y_pred = model.predict(X_test.drop(['house_id'], axis=1))
+        predicted_price = np.expm1(y_pred[house_index]).round(2) 
+        formatted_predicted_price = f'{predicted_price:,.2f}'
+        st.write(f"CatBoost Model's Price Prediction for House {house_id}: ${formatted_predicted_price}")
+
+        difference = predicted_price - actual_price
+        formatted_difference = f'{np.abs(difference):,.2f}'
         if difference > 0:
-            st.write(f"Difference Between the Predicted and Actual Price: ${np.round(difference,2)}")
+            st.write(f"Difference Between the Predicted and Actual Price: ${formatted_difference}")
         else:
-            st.write(f"Difference Between the Predicted and Actual Price: -${np.absolute(np.round(difference,2))}")
+            st.write(f"Difference Between the Predicted and Actual Price: -${formatted_difference}")
         plot_shap(model, data, house_id, X_train=X_train, X_test=X_test)
 
-    # If Feature Importance is selected
-    elif election == "Feature Importance":
-        summary(model, data, X_train=X_train.drop('house_id',axis=1), X_test=X_test.drop('house_id',axis=1))
+    # Call the conclusion and future work display function if the selected page is 'Conclusion and Future Work'
+    elif page == 'Conclusion and Future Work':
+        conclusion_future_work.display_conclusion_and_future_work()
 
+    # Call the feature definitions display function if the selected page is 'Feature Definitions'
+    elif page == 'Feature Definitions':
+        feature_definitions.display_feature_definitions()
+  
 if __name__ == "__main__":
     main()
