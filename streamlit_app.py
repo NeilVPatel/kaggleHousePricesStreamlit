@@ -145,13 +145,13 @@ def plot_shap(model, data, house_id, X_train, X_test):
     # Visualize SHAP values
     st.subheader("SHAP Values Visualization")
     plot_shap_values(model, explainer, shap_values_cat_train, shap_values_cat_test, house_id, X_test, X_train)
-    st.caption("This plot show how each feature influences the model’s prediction for each house. Positive values indicate features that increase the predicted price, while negative values indicate features that decrease it. This helps in understanding which features are most important in the prediction process.")
+    st.caption("This plot show how each feature influences the model’s prediction for each house. Positive values indicate features that increase the predicted price, while negative values indicate features that decrease it. This helps in understanding which features are most important in the prediction process. *Note: The model's output values have been transformed using the natural logarithm to stabilize variance and normalize the distribution, resulting in logged output values.")
     
     # Waterfall
     st.subheader("SHAP Waterfall Visualization")
     house_index = X_test[X_test['house_id'] == house_id].index[0]
     display_shap_waterfall_plot(explainer, explainer.expected_value, shap_values_cat_test[house_index], feature_names=X_test.columns, max_display=11)
-    st.caption("This plot shows the base value (the average model prediction) and then adds or subtracts the contribution of each feature to show how they lead to the final prediction for a specific house. It gives a step-by-step explanation of how the model arrived at its prediction for that house.")
+    st.caption("This plot shows the base value (the average model prediction) and then adds or subtracts the contribution of each feature to show how they lead to the final prediction for a specific house. It gives a step-by-step explanation of how the model arrived at its prediction for that house. *Note: The model's output values have been transformed using the natural logarithm to stabilize variance and normalize the distribution, resulting in logged output values.")
     
 st.title("House Prices Prediction Project")
 
